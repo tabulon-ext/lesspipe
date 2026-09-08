@@ -1,6 +1,44 @@
 ****************************************************************************
 # ChangeLog for lesspipe.sh						   #
 ****************************************************************************
+Version 2.28 Sep 8 2026
+- do not try colorizer for unspecific plain ascii files
+- allow for watching of growing files in more cases
+- revert #205 temporarily (due to SELinux problems in Fedora)
+- treat zip files as xlsx if file has the extension xlsx
+Version 2.27 Jun 10 2026
+- show all certificates contained in a pem or crt file
+- fix perldoc not showing contents (#205) and no cpio contents listing (#206)
+Version 2.26 Jun 05 2026
+- add support for sqlite3 files (fixes #204)
+- improve log file handling (colorizing, watching growing files)
+- limit colorizing file up to sizes of LESS_MAXSIZE_COLOR (200 000) for speed
+- introduced .lessignore to not filter files by lesspipe.sh
+- use file names without file extension as hint for colorizing (fixes #203)
+- adapt xmq calls to changed command line options
+- improved documentation
+- allow switching off archive_color by appending a colon to the file name
+- speedup archive_color and remove external programs from it
+. fix bat option processing, issue warning if colorizer not found
+Version 2.25 Apr 25 2026
+- make procyon (java decompiler) output colorful
+- replace colorizer input from pipe with temporary file input
+- parse tests before processing it in test.sh and properly display comments
+- refactor colorizer code in lesspipe.sh
+- add support for emacs based colorizer e2ansi-cat
+Version 2.24 Apr 04 2026
+- test suite updated, supplied vimcolor gets used for testing only
+- move vimcolor to a separate git repository
+- add a bash/zsh script vimcolor for color tests with same functionality
+- do no longer install a vimcolor ih´n the bin directory
+- reenable colorizing log files, now using tspin (fixes #175)
+Version 2.23 Mar 22 2026
+- spec file for RPM creation updated
+- license info updated
+- test suite changed to get consistent results on most systems
+- for color tests fix the choice of the colorizer
+- replace test.pl by test.sh (both for bash and zsh)
+- fix several bugs in colorizing (also in vimcolor)
 - put code2color into a separate repository
 - improve logic in configure and fix bug in archive color
 - replace perl scripts configure and archive_color by shell scripts

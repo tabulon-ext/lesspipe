@@ -1,20 +1,75 @@
+%global debug_package %{nil}
+
+%global lesspipe_exec_dir	%{_libexecdir}/%{name}
+%global bash_completion		%{_datarootdir}/bash-completion/completions
+%global zsh_completion		%{_datarootdir}/zsh/site-functions
+
 %define packagename lesspipe
-%define packageversion 2.22
+%define packageversion 2.28
 %define packagerelease 1
 
-Name:          %{packagename}
-Version:       %{packageversion}
-Release:       %{packagerelease}%{?dist}
-Group:         Languages
-Source0:       https://github.com/wofr06/lesspipe/archive/refs/tags/v%{packageversion}.tar.gz
-BuildArch:     noarch
-AutoReqProv:   on
-Packager:      Wolfgang Friebel <wp.friebel@gmail.com>
-URL:           https://github.com/wofr06/lesspipe/
-License:       GPL
-BuildRoot:     /var/tmp/%{packagename}-%{packageversion}
-BuildRequires: make perl bash zsh
-Summary:       Input filter for less to better display files
+Name:		%{packagename}
+Version:	%{packageversion}
+Release:	%{packagerelease}%{?dist}
+Summary:	Input filter for less to better display files
+License:	GPL-2.0-or-later
+URL:		https://lesspipe.org/
+Packager:	Wolfgang Friebel <wp.friebel@gmail.com>
+Source0:	https://github.com/wofr06/lesspipe/archive/refs/tags/v%{version}.tar.gz
+Source1:	profile-lesspipe.sh
+Source2:	profile-lesspipe.csh
+BuildArch:	noarch
+AutoReqProv:	on
+
+Requires:	less
+Requires:	/usr/bin/ps
+# suggested by the author Wolfgang Friebel
+Recommends:	bat
+Suggests:	(elinks or lynx or w3m)
+Suggests:	(vim-enhanced or neovim)
+
+BuildRequires:	bash
+BuildRequires:	diffutils
+BuildRequires:	glibc-langpack-en
+BuildRequires:	less
+BuildRequires:	make
+# try to run as many tests as possible from test.sh
+#BuildRequires:	/usr/bin/7za
+#BuildRequires:	/usr/bin/brotli
+#BuildRequires:	/usr/bin/bsdtar
+#BuildRequires:	/usr/bin/cabextract
+#BuildRequires:	/usr/bin/djvutxt
+#BuildRequires:	/usr/bin/elinks
+#BuildRequires:	/usr/bin/exiftool
+#BuildRequires:	/usr/bin/ffprobe
+#BuildRequires:	/usr/bin/groff
+#BuildRequires:	/usr/bin/isoinfo
+#BuildRequires:	/usr/bin/h5dump
+#BuildRequires:	/usr/bin/lz4
+#BuildRequires:	/usr/bin/lzip
+#BuildRequires:	/usr/bin/lzma
+#BuildRequires:	/usr/bin/openssl
+#BuildRequires:	/usr/bin/pandoc
+#BuildRequires:	/usr/bin/pigz
+#BuildRequires:	/usr/bin/plistutil
+BuildRequires:	/usr/bin/ps
+#BuildRequires:	/usr/bin/ps2ascii
+BuildRequires:	/usr/bin/unzip
+BuildRequires:	/usr/bin/vim
+BuildRequires:	/usr/bin/xz
+#BuildRequires:	/usr/bin/sqlite3
+# needed for color tests in test.sh
+BuildRequires:	bat
+#BuildRequires:	/usr/bin/dtc
+#BuildRequires:	/usr/bin/pandoc
+#BuildRequires:	/usr/bin/pygmentize
+#BuildRequires:	/usr/bin/source-highlight
+#%if 0%{?fedora}
+#BuildRequires:	/usr/bin/dvi2tty
+#BuildRequires:	/usr/bin/matdump
+#BuildRequires:	/usr/bin/odt2txt
+#BuildRequires:	libreoffice
+#%endif
 
 %description
 lesspipe.sh is an input filter for the pager less. It is able to process a
@@ -27,75 +82,70 @@ easily extensible for new formats. The input filter is a bash script, but
 works as well as a zsh script. For zsh and bash tab completion mechanisms
 for archive contents are provided.
 
+%package profile
+Summary:   Input filter for less to better display files - profile scripts
+
+%description profile
+lesspipe.sh is an input filter for the pager less. It is able to process a
+wide variety of file formats. It enables users to deeply inspect archives
+and to display the contents of files in archives without having to unpack
+them before. That means file contents can be properly interpreted even if
+the files are compressed and contained in a hierarchy of archives (often
+found in RPM or DEB archives containing source tarballs). The filter is
+easily extensible for new formats. The input filter is a bash script, but
+works as well as a zsh script. For zsh and bash tab completion mechanisms
+for archive contents are provided.
+
+This package contains profile scripts to automatically set LESSOPEN
+on login.
+
 %prep
-%setup -n lesspipe-%{packageversion}
+%autosetup
 
 %build
-
-%define prefix /usr
-%define bindir %{prefix}/libexec/%{name}
-%define bash_completion %{_datarootdir}/bash-completion/completions
-%define zsh_completion %{_datarootdir}/zsh/site-functions
-./configure --prefix=%{prefix} --bindir=%{bindir} --bash-completion-dir=%{bash_completion} --zsh-completion-dir=%{zsh_completion}
+./configure --prefix=%{_prefix} --bindir=%{lesspipe_exec_dir} --libexecdir=%{lesspipe_exec_dir} --bash-completion-dir=%{bash_completion} --zsh-completion-dir=%{zsh_completion}
 
 %install
-#
-# after some safety checks, clean out the build root
-#
-[ ! -z "$RPM_BUILD_ROOT" ] &&  [ "$RPM_BUILD_ROOT" !=  "/" ] && \
-    rm -rf $RPM_BUILD_ROOT
-
-#run install script first so we can pick up all of the files
-
-make install DESTDIR=$RPM_BUILD_ROOT
+%make_install
 
 # create profile.d scripts to set LESSOPEN
-mkdir -p $RPM_BUILD_ROOT/etc/profile.d
-cat << EOF > $RPM_BUILD_ROOT/etc/profile.d/zzless.sh
-[ -x %{bindir}/lesspipe.sh ] && export LESSOPEN="|%{bindir}/lesspipe.sh %s"
-EOF
-cat << EOF > $RPM_BUILD_ROOT/etc/profile.d/zzless.csh
-if ( -x %{bindir}/lesspipe.sh ) then
-  setenv LESSOPEN "|%{bindir}/lesspipe.sh %s"
-endif
-EOF
+mkdir -p %{buildroot}%{_sysconfdir}/profile.d
+sed -e "s@__BINDIR__@%{lesspipe_exec_dir}@g" %{SOURCE1} > %{buildroot}%{_sysconfdir}/profile.d/50-lesspipe.sh
+sed -e "s@__BINDIR__@%{lesspipe_exec_dir}@g" %{SOURCE2} > %{buildroot}%{_sysconfdir}/profile.d/50-lesspipe.csh
 
-%clean
+%check
 
-cd $RPM_BUILD_DIR
-[ ! -z "$RPM_BUILD_ROOT" ] &&  [ "$RPM_BUILD_ROOT" !=  "/" ] && \
-    rm -rf $RPM_BUILD_ROOT
-[ ! -z "$RPM_BUILD_DIR" ] &&  [ "$RPM_BUILD_DIR" !=  "/" ] && \
-    rm -rf $RPM_BUILD_DIR/lesspipe-%{packageversion}
-
-%pre
-
-%post
-
-%preun
-
-%postun
+env TERM=xterm-256color ./test.sh %{buildroot}%{lesspipe_exec_dir}/lesspipe.sh
 
 %files
+%dir %{lesspipe_exec_dir}
+%{lesspipe_exec_dir}/*
+%dir %{bash_completion}
+%{bash_completion}/*
+%dir %{zsh_completion}
+%{zsh_completion}/*
+%{_mandir}/man1/lesspipe.1.*
+%license LICENSE
+%doc ChangeLog INSTALL README.md german.txt
 
-%defattr(-,root,root)
-%doc ChangeLog COPYING INSTALL README.md german.txt
-%dir %{bindir}
-%{bindir}/lesspipe.sh
-%{bindir}/archive_color
-%{bindir}/code2color
-%{bindir}/vimcolor
-%{bindir}/lesscomplete
-%{_mandir}/man*/*
-%{bash_completion}
-%{zsh_completion}
-/etc/profile.d/*
-
-#%docdir %{prefix}/share/man/man1
+%files profile
+%{_sysconfdir}/profile.d/*
 
 %changelog
+* Tue Sep 08 2026 2.28-1 - wp.friebel@gmail.com
+- improvements for watching growing files and text files with large HTML content
+* Wed Jun 10 2026 2.27-1 - wp.friebel@gmail.com
+- better certicicate files handling, add sqlite db display
+* Fri Jun 05 2026 2.26-1 - wp.friebel@gmail.com
+- speed up log file processing and improve color handling
+* Sat Apr 25 2026 2.25-1 - wp.friebel@gmail.com
+- emacs based colorizer e2ansi-cat added, procyon output can get colored
+* Sat Apr 04 2026 2.24-1 - wp.friebel@gmail.com
+- no more perl dependency, log files can get colorized using tspin
+* Sat Mar 21 2026 2.23-1 - wp.friebel@gmail.com
+- more consistent test suite, convert some scripts from perl to bash
 * Mon Dec 15 2025 2.22-1 - wp.friebel@gmail.com
-- bug fixes, documentation changes, sxw2txt removed
+- bug fixes, documentation changes, sxw2txt and code2color removed
 * Mon Nov 24 2025 2.21-1 - wp.friebel@gmail.com
 - documentation changes, markdown support changed, correctly report empty files
 * Fri Sep 12 2025 2.20-1 - wp.friebel@gmail.com
